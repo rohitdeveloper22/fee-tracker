@@ -1,0 +1,19 @@
+{
+  "name": "Student Fee Tracker",
+  "short_name": "Fee Tracker",
+  "description": "Monthly student fee management",
+  "start_url": "/fee-tracker/",
+  "scope": "/fee-tracker/",
+  "display": "standalone",
+  "background_color": "#f5f5f3",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%234f46e5'/%3E%3Ctext x='56' y='320' font-size='300' font-family='Arial' fill='white'%3E%E2%82%B9%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

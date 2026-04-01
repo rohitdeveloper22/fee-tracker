@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Student Fee Tracker</title>
+
+<link rel="manifest" href="manifest.json">
+
+<!-- PWA: iOS / Safari -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fee Tracker">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#4f46e5">
+
+<!-- PWA: iOS icon (inline SVG as data URI) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%234f46e5'/%3E%3Ctext x='56' y='320' font-size='300' font-family='Arial' fill='white'%3E%E2%82%B9%3C/text%3E%3C/svg%3E">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #f5f5f3;
+  --surface:   #ffffff;
+  --surface2:  #f9f9f7;
+  --border:    #e2e2de;
+  --text:      #1a1a18;
+  --muted:     #6b6b68;
+  --accent:    #4f46e5;
+  --accent-lo: #eef2ff;
+  --danger:    #dc2626;
+  --danger-lo: #fef2f2;
+  --success:   #16a34a;
+  --success-lo:#f0fdf4;
+  --warn:      #d97706;
+  --warn-lo:   #fffbeb;
+  --info:      #0369a1;
+  --info-lo:   #f0f9ff;
+  --radius:    10px;
+  --radius-lg: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #0f0f0e;
+    --surface:   #1c1c1a;
+    --surface2:  #161614;
+    --border:    #2e2e2b;
+    --text:      #f0f0ee;
+    --muted:     #8a8a85;
+    --accent:    #818cf8;
+    --accent-lo: #1e1b4b;
+    --danger:    #f87171;
+    --danger-lo: #450a0a;
+    --success:   #4ade80;
+    --success-lo:#052e16;
+    --warn:      #fbbf24;
+    --warn-lo:   #451a03;
+    --info:      #38bdf8;
+    --info-lo:   #082f49;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.container { max-width: 740px; margin: 0 auto; }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.75rem;
+}
+.header-title { font-size: 20px; font-weight: 600; }
+.header-title span { color: var(--accent); }
+
+.header-actions {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+
+.month-badge {
+  font-size: 12px; font-weight: 500;
+  background: var(--accent-lo); color: var(--accent);
+  padding: 3px 10px; border-radius: 20px;
+  margin-bottom: 1.25rem; display: inline-block;
+}
+
+.summary {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; margin-bottom: 1.5rem;
+}
+.summary-card {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: var(--radius); padding: 0.85rem 1rem;
+}
+.summary-card .label {
+  font-size: 11px; color: var(--muted); margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.summary-card .value { font-size: 20px; font-weight: 600; }
+.summary-card.earned .value  { color: var(--success); }
+.summary-card.pending .value { color: var(--warn); }
+
+.panel {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg); margin-bottom: 1rem; overflow: hidden;
+}
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.9rem 1.1rem; cursor: pointer; user-select: none;
+  font-weight: 500; font-size: 14px;
+}
+.panel-header:hover { background: var(--surface2); }
+.panel-chevron { font-size: 11px; color: var(--muted); transition: transform 0.2s; }
+.panel.open .panel-chevron { transform: rotate(180deg); }
+.panel-body {
+  display: none; padding: 0 1.1rem 1.1rem;
+  border-top: 0.5px solid var(--border);
+}
+.panel.open .panel-body { display: block; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 1rem; }
+.form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 520px) {
+  .form-grid, .form-grid.three { grid-template-columns: 1fr; }
+  .summary { grid-template-columns: 1fr 1fr; }
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+label { font-size: 12px; font-weight: 500; color: var(--muted); }
+input, select {
+  padding: 0.55rem 0.75rem;
+  border: 0.5px solid var(--border); border-radius: var(--radius);
+  background: var(--bg); color: var(--text);
+  font-size: 14px; outline: none; transition: border-color 0.15s; width: 100%;
+}
+input:focus, select:focus { border-color: var(--accent); background: var(--surface); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0.55rem 1.1rem; border-radius: var(--radius);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  border: 0.5px solid var(--border); background: var(--surface);
+  color: var(--text); transition: background 0.15s; white-space: nowrap;
+}
+.btn:hover { background: var(--bg); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { opacity: 0.88; background: var(--accent); }
+.btn-danger  { color: var(--danger); border-color: var(--danger); }
+.btn-danger:hover  { background: var(--danger-lo); }
+.btn-success { background: var(--success); color: #fff; border-color: var(--success); }
+.btn-success:hover { opacity: 0.88; background: var(--success); }
+.btn-sm { padding: 0.3rem 0.7rem; font-size: 12px; }
+.btn-row { display: flex; gap: 8px; margin-top: 0.85rem; flex-wrap: wrap; }
+
+.search-wrap { position: relative; margin-bottom: 1.25rem; }
+.search-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: 14px; pointer-events: none;
+}
+.search-wrap input { padding-left: 2.2rem; }
+
+.students-list { display: flex; flex-direction: column; gap: 10px; }
+
+.student-card {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.student-card.has-balance { border-color: var(--warn); }
+.student-card.cleared     { border-color: var(--success); }
+
+.student-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0.9rem 1rem; cursor: pointer;
+}
+.student-avatar {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent-lo); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 14px;
+}
+.student-info { flex: 1; min-width: 0; }
+.student-name { font-weight: 600; font-size: 15px; }
+.student-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.student-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+.badge {
+  font-size: 11px; font-weight: 500; padding: 2px 8px;
+  border-radius: 20px; white-space: nowrap;
+}
+.badge-fee    { background: var(--accent-lo);  color: var(--accent); }
+.badge-paid   { background: var(--success-lo); color: var(--success); }
+.badge-due    { background: var(--warn-lo);    color: var(--warn); }
+.badge-clear  { background: var(--success-lo); color: var(--success); }
+
+.student-body { display: none; border-top: 0.5px solid var(--border); }
+.student-card.expanded .student-body { display: block; }
+
+.added-strip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0.5rem 1rem;
+  background: var(--surface2);
+  border-bottom: 0.5px solid var(--border);
+  font-size: 12px; color: var(--muted);
+}
+.added-strip strong { color: var(--text); font-weight: 500; }
+
+.progress-wrap { padding: 0.85rem 1rem 0; }
+.progress-labels {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--muted); margin-bottom: 5px;
+}
+.progress-track { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--warn); border-radius: 99px; transition: width 0.3s; }
+.progress-fill.done { background: var(--success); }
+
+.student-actions { display: flex; gap: 8px; padding: 0.75rem 1rem; flex-wrap: wrap; }
+
+.pay-form {
+  background: var(--surface2);
+  border-top: 0.5px solid var(--border);
+  padding: 0.85rem 1rem; display: none;
+}
+.pay-form.open { display: block; }
+.pay-form .form-grid.three { margin-top: 0; }
+
+.history-section { padding: 0 1rem 1rem; }
+.history-heading {
+  font-size: 11px; color: var(--muted); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin: 0.85rem 0 0.6rem;
+}
+
+.month-group { margin-bottom: 0.85rem; }
+.month-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 600;
+  padding: 5px 10px; background: var(--bg);
+  border-radius: var(--radius); margin-bottom: 6px;
+}
+.month-pill {
+  font-size: 10px; font-weight: 500; padding: 1px 7px; border-radius: 20px;
+  background: var(--accent-lo); color: var(--accent);
+}
+.month-pill.current { background: var(--success-lo); color: var(--success); }
+.month-row-total { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 400; }
+
+.history-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; background: var(--surface2); margin-bottom: 4px;
+  border-radius: var(--radius); font-size: 12px;
+}
+.h-left { display: flex; gap: 8px; }
+.h-date { color: var(--text); }
+.h-time { color: var(--muted); }
+.h-right { display: flex; align-items: center; gap: 8px; }
+.h-amount { font-weight: 600; color: var(--success); }
+.history-delete {
+  background: none; border: none; color: var(--danger);
+  cursor: pointer; padding: 2px 5px; font-size: 10px;
+  border-radius: 3px; transition: background 0.1s;
+}
+.history-delete:hover { background: var(--danger-lo); }
+.history-empty { text-align: center; color: var(--muted); padding: 1.5rem; }
+
+.empty {
+  text-align: center; padding: 3rem 1rem; color: var(--muted);
+}
+.empty-icon { font-size: 48px; margin-bottom: 1rem; }
+
+.toast {
+  position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: var(--bg);
+  padding: 0.6rem 1.2rem; border-radius: var(--radius);
+  font-size: 13px; font-weight: 500;
+  z-index: 9999; opacity: 0; transition: opacity 0.2s;
+  pointer-events: none; white-space: nowrap; max-width: 90vw;
+}
+.toast.show { opacity: 1; }
+
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);
+  display: none; align-items: center; justify-content: center;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--radius-lg);
+  border: 0.5px solid var(--border); padding: 1.5rem;
+  max-width: 420px; width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+.modal-title {
+  font-size: 16px; font-weight: 600; margin-bottom: 0.5rem;
+}
+.modal-msg { font-size: 14px; color: var(--muted); margin-bottom: 1.25rem; }
+.modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+
+/* Hidden file input */
+#importFileInput { display: none; }
+
+/* ── PWA Install Banner ── */
+#pwa-banner {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9998;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 0.85rem 1.2rem calc(0.85rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+  align-items: center; gap: 12px;
+}
+#pwa-banner.visible { display: flex; }
+.pwa-icon {
+  width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+  background: var(--accent); display: flex; align-items: center;
+  justify-content: center; font-size: 22px; color: #fff;
+}
+.pwa-text { flex: 1; min-width: 0; }
+.pwa-text strong { display: block; font-size: 14px; font-weight: 600; }
+.pwa-text span   { font-size: 12px; color: var(--muted); }
+.pwa-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.pwa-dismiss {
+  background: none; border: 0.5px solid var(--border);
+  color: var(--muted); border-radius: var(--radius);
+  padding: 0.4rem 0.8rem; font-size: 12px; cursor: pointer;
+}
+.pwa-install {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--radius);
+  padding: 0.4rem 1rem; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+
+/* ── iOS install hint ── */
+#ios-hint {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9998;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 1rem 1.2rem calc(1rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.12); text-align: center;
+}
+#ios-hint.visible { display: block; }
+#ios-hint p { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+#ios-hint strong { color: var(--text); }
+#ios-hint-close {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: none; font-size: 16px;
+  color: var(--muted); cursor: pointer;
+}
+
+/* ── Safe area for standalone mode ── */
+body { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+@media (display-mode: standalone) {
+  body { padding-top: calc(1.5rem + env(safe-area-inset-top)); }
+}
+
+/* ── Section Dividers (Paid / Unpaid) ── */
+.section-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 1.25rem 0 0.75rem;
+}
+.section-divider-line {
+  flex: 1; height: 1px; background: var(--border);
+}
+.section-divider-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; white-space: nowrap;
+  padding: 4px 12px; border-radius: 20px;
+}
+.section-divider-label.unpaid {
+  background: var(--warn-lo); color: var(--warn);
+}
+.section-divider-label.paid {
+  background: var(--success-lo); color: var(--success);
+}
+.section-divider-count {
+  background: rgba(0,0,0,0.08); border-radius: 20px;
+  padding: 1px 7px; font-size: 10px;
+}
+
+/* ── Serial Number ── */
+.student-serial {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  background: var(--bg); border: 0.5px solid var(--border);
+  border-radius: 50%; width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; letter-spacing: 0;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="header-title">Student <span>Fee Tracker</span></div>
+    <div class="header-actions">
+      <button class="btn btn-success btn-sm" onclick="exportData()" title="Export all data">
+        &#128190; Export Data
+      </button>
+      <button class="btn btn-sm" onclick="triggerImport()" title="Import data from file">
+        &#128194; Import Data
+      </button>
+      <button class="btn btn-sm" id="installBtn" onclick="triggerInstall()"
+        title="Install App" style="display:none; background:var(--accent); color:#fff; border-color:var(--accent);">
+        &#8659; Install App
+      </button>
+    </div>
+  </div>
+
+  <!-- Android/Chrome PWA Banner -->
+  <div id="pwa-banner">
+    <div class="pwa-icon">&#8377;</div>
+    <div class="pwa-text">
+      <strong>Fee Tracker</strong>
+      <span>Home screen par install karein — offline bhi kaam karega</span>
+    </div>
+    <div class="pwa-actions">
+      <button class="pwa-dismiss" onclick="dismissBanner()">Baad mein</button>
+      <button class="pwa-install" onclick="triggerInstall()">Install</button>
+    </div>
+  </div>
+
+  <!-- iOS Safari Install Hint -->
+  <div id="ios-hint">
+    <button id="ios-hint-close" onclick="dismissIosHint()">&#10005;</button>
+    <p>&#128247; Safari mein neeche <strong>Share</strong> button dabaiye,<br>
+    phir <strong>"Add to Home Screen"</strong> select karein</p>
+    <p style="font-size:11px;margin-top:4px;">📌 Home screen se open karne par data save rahega</p>
+  </div>
+
+  <div class="month-badge" id="monthBadge"></div>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="label">Students</div>
+      <div class="value" id="totalStudents">0</div>
+    </div>
+    <div class="summary-card earned">
+      <div class="label">This Month</div>
+      <div class="value" id="totalEarned">&#8377;0</div>
+    </div>
+    <div class="summary-card pending">
+      <div class="label">Pending</div>
+      <div class="value" id="totalPending">&#8377;0</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header" onclick="togglePanel(this)">
+      <span>+ Add Student</span>
+      <span class="panel-chevron">&#9650;</span>
+    </div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" id="newName" placeholder="e.g. Rahul Sharma">
+        </div>
+        <div class="field">
+          <label>Phone (optional)</label>
+          <input type="tel" id="newPhone" placeholder="e.g. 9876543210">
+        </div>
+      </div>
+      <div class="form-grid" style="margin-top:10px;">
+        <div class="field">
+          <label>Monthly Fee (&#8377;)</label>
+          <input type="number" id="newFee" placeholder="e.g. 1000" min="1">
+        </div>
+        <div class="field" style="justify-content:flex-end;">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" style="width:100%" onclick="addStudent()">Add Student</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input type="search" id="searchInput" placeholder="Search by name or phone..."
+      oninput="renderStudents()">
+  </div>
+
+  <div class="students-list" id="studentsList"></div>
+
+</div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="importFileInput" accept=".json" onchange="handleImportFile(event)">
+
+<!-- Delete confirmation modal -->
+<div class="modal-backdrop" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">&#9888; Confirm Deletion</div>
+    <div class="modal-msg" id="deleteModalMsg"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── State ── */
+let students = [];
+let deleteTarget = null;
+const STORE_KEY = 'fee-students';
+
+/* ── Toast notification ── */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* ── Month helpers ── */
+function monthKey(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function monthLabel(key) {
+  const [y, m] = key.split('-');
+  const d = new Date(y, m - 1);
+  const mo = d.toLocaleString('en-US', { month: 'short' });
+  return mo + ' ' + y;
+}
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
+}
+function currentMonth() {
+  const d = new Date();
+  const mo = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  document.getElementById('monthBadge').textContent = mo;
+  return monthKey(Date.now());
+}
+
+/* ── Format ── */
+const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const esc = s => String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function initials(name) {
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+}
+
+function fmtDate(ts) {
+  const d = new Date(ts);
+  const day = d.getDate();
+  const mo = d.toLocaleString('en-US', { month: 'short' });
+  return day + ' ' + mo;
+}
+function fmtTime(ts) {
+  const d = new Date(ts);
+  const hr = d.getHours();
+  const mn = d.getMinutes();
+  const ap = hr >= 12 ? 'PM' : 'AM';
+  const h12 = hr % 12 || 12;
+  return h12 + ':' + String(mn).padStart(2, '0') + ' ' + ap;
+}
+function fmtDateTime(ts) {
+  return fmtDate(ts) + ', ' + fmtTime(ts);
+}
+
+/* ── Storage ── */
+function load() {
+  const raw = localStorage.getItem(STORE_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+function save(data) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+/* ── EXPORT DATA ── */
+function exportData() {
+  const data = {
+    exportDate: new Date().toISOString(),
+    version: '1.0',
+    students: students
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `fee-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  toast('✓ Data exported successfully');
+}
+
+/* ── IMPORT DATA ── */
+function triggerImport() {
+  document.getElementById('importFileInput').click();
+}
+
+function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      
+      if (!imported.students || !Array.isArray(imported.students)) {
+        toast('❌ Invalid file format');
+        return;
+      }
+      
+      // Merge imported students with existing ones
+      let added = 0;
+      let updated = 0;
+      
+      imported.students.forEach(importedStudent => {
+        const existingIndex = students.findIndex(s => s.id === importedStudent.id);
+        
+        if (existingIndex === -1) {
+          // New student - add it
+          students.push(importedStudent);
+          added++;
+        } else {
+          // Existing student - merge payments
+          const existing = students[existingIndex];
+          
+          // Create a Set of existing payment timestamps to avoid duplicates
+          const existingPaymentDates = new Set(
+            existing.payments.map(p => p.date)
+          );
+          
+          // Add only new payments
+          importedStudent.payments.forEach(payment => {
+            if (!existingPaymentDates.has(payment.date)) {
+              existing.payments.push(payment);
+            }
+          });
+          
+          // Update other fields if they're different
+          if (existing.name !== importedStudent.name || 
+              existing.monthlyFee !== importedStudent.monthlyFee ||
+              existing.phone !== importedStudent.phone) {
+            existing.name = importedStudent.name;
+            existing.monthlyFee = importedStudent.monthlyFee;
+            existing.phone = importedStudent.phone;
+          }
+          
+          updated++;
+        }
+      });
+      
+      save(students);
+      renderStudents();
+      
+      let msg = '✓ Import successful';
+      if (added > 0) msg += ` - ${added} student(s) added`;
+      if (updated > 0) msg += ` - ${updated} student(s) updated`;
+      toast(msg);
+      
+      // Reset file input
+      event.target.value = '';
+      
+    } catch (err) {
+      toast('❌ Error reading file: ' + err.message);
+      event.target.value = '';
+    }
+  };
+  
+  reader.readAsText(file);
+}
+
+/* ── Init data ── */
+students = load();
+currentMonth();
+
+/* ── Toggle panel ── */
+function togglePanel(header) {
+  header.closest('.panel').classList.toggle('open');
+}
+
+/* ── Add student ── */
+function addStudent() {
+  const name = document.getElementById('newName').value.trim();
+  const phone = document.getElementById('newPhone').value.trim();
+  const fee = parseFloat(document.getElementById('newFee').value);
+
+  if (!name) { toast('Enter student name'); return; }
+  if (!fee || fee < 1) { toast('Enter valid monthly fee'); return; }
+
+  students.push({
+    id: 'stu-' + Date.now(),
+    name,
+    phone: phone || '',
+    monthlyFee: fee,
+    payments: [],
+    createdAt: Date.now()
+  });
+
+  save(students);
+  renderStudents();
+  document.getElementById('newName').value = '';
+  document.getElementById('newPhone').value = '';
+  document.getElementById('newFee').value = '';
+  toast('Student added: ' + name);
+}
+
+/* ── Summary ── */
+function updateSummary() {
+  const cur = monthKey(Date.now());
+  const totalS = students.length;
+  let earned = 0;
+  let pending = 0;
+
+  students.forEach(s => {
+    const thisMo = s.payments
+      .filter(p => monthKey(p.date) === cur)
+      .reduce((a, p) => a + p.amount, 0);
+    earned += thisMo;
+    const bal = s.monthlyFee - thisMo;
+    if (bal > 0) pending += bal;
+  });
+
+  document.getElementById('totalStudents').textContent = totalS;
+  document.getElementById('totalEarned').textContent = fmt(earned);
+  document.getElementById('totalPending').textContent = fmt(pending);
+}
+
+/* ── Build a student card ── */
+function buildCard(s, serialNo) {
+  const cur = monthKey(Date.now());
+
+  /* This month's progress */
+  const paid = s.payments
+    .filter(p => monthKey(p.date) === cur)
+    .reduce((a, p) => a + p.amount, 0);
+  const pct = Math.min(Math.round((paid / s.monthlyFee) * 100), 100);
+  const balance = s.monthlyFee - paid;
+  const cleared = balance === 0;
+
+  /* Group ALL payments by month for history */
+  const byMonth = {};
+  s.payments.forEach((p, i) => {
+    const mk = monthKey(p.date);
+    if (!byMonth[mk]) byMonth[mk] = [];
+    byMonth[mk].push({ ...p, _i: i });
+  });
+  const sortedMonths = Object.keys(byMonth).sort((a,b) => b.localeCompare(a));
+
+  /* History HTML */
+  let histHTML = '';
+  if (sortedMonths.length === 0) {
+    histHTML = '<p class="history-empty">No payments recorded yet.</p>';
+  } else {
+    histHTML = sortedMonths.map(mk => {
+      const isCur   = mk === cur;
+      const mTotal  = byMonth[mk].reduce((s, p) => s + p.amount, 0);
+      const items   = byMonth[mk]
+        .slice().sort((a,b) => b.date - a.date)
+        .map(p => `
+          <div class="history-item">
+            <div class="h-left">
+              <span class="h-date">${fmtDate(p.date)}</span>
+              <span class="h-time">${fmtTime(p.date)}</span>
+            </div>
+            <div class="h-right">
+              <span class="h-amount">${fmt(p.amount)}</span>
+              <button class="history-delete"
+                onclick="deletePayment('${s.id}',${p._i})"
+                title="Remove">&#10005;</button>
+            </div>
+          </div>`).join('');
+      return `
+        <div class="month-group">
+          <div class="month-row">
+            <span>${monthLabel(mk)}</span>
+            ${isCur ? `<span class="month-pill current">This month</span>` : `<span class="month-pill">&nbsp;</span>`}
+            <span class="month-row-total">Total ${fmt(mTotal)}</span>
+          </div>
+          ${items}
+        </div>`;
+    }).join('');
+  }
+
+  const borderClass = cleared ? 'cleared' : 'has-balance';
+
+  return `
+  <div class="student-card ${borderClass}" id="sc-${s.id}">
+
+    <div class="student-head" onclick="toggleStudent('${s.id}')">
+      <div class="student-serial">${serialNo}</div>
+      <div class="student-avatar">${initials(s.name)}</div>
+      <div class="student-info">
+        <div class="student-name">${esc(s.name)}</div>
+        ${s.phone ? `<div class="student-meta">&#128222; ${esc(s.phone)}</div>` : ''}
+        <div class="student-badges">
+          <span class="badge badge-fee">&#8377;${s.monthlyFee}/mo</span>
+          <span class="badge badge-paid">Paid ${fmt(paid)}</span>
+          ${balance > 0
+            ? `<span class="badge badge-due">Due ${fmt(balance)}</span>`
+            : `<span class="badge badge-clear">&#10003; Cleared</span>`}
+        </div>
+      </div>
+      <span style="color:var(--muted);font-size:11px;flex-shrink:0;">&#9660;</span>
+    </div>
+
+    <div class="student-body">
+
+      <!-- When was this student added -->
+      <div class="added-strip">
+        &#128197;&nbsp;
+        Added on <strong>${fmtDateTime(s.createdAt || Date.now())}</strong>
+      </div>
+
+      <!-- This-month progress bar -->
+      <div class="progress-wrap">
+        <div class="progress-labels">
+          <span>${pct}% paid this month</span>
+          <span>${fmt(paid)} / ${fmt(s.monthlyFee)}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill ${cleared ? 'done' : ''}" style="width:${pct}%"></div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="student-actions">
+        <button class="btn btn-primary btn-sm" onclick="openPayForm('${s.id}')">+ Record Payment</button>
+        <button class="btn btn-sm btn-danger"  onclick="openDeleteModal('${s.id}')">Delete Student</button>
+      </div>
+
+      <!-- Inline payment entry -->
+      <div class="pay-form" id="pf-${s.id}">
+        <div class="form-grid three">
+          <div class="field">
+            <label>Amount (&#8377;)</label>
+            <input type="number" id="pa-${s.id}"
+              placeholder="${balance > 0 ? Math.round(balance) : s.monthlyFee}" min="1">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="pd-${s.id}" value="${todayISO()}">
+          </div>
+          <div class="field" style="justify-content:flex-end;">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" style="width:100%"
+              onclick="recordPayment('${s.id}')">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full payment history, grouped by month -->
+      <div class="history-section">
+        <div class="history-heading">Payment history (all months)</div>
+        ${histHTML}
+      </div>
+
+    </div>
+  </div>`;
+}
+
+/* ── Render ── */
+function renderStudents() {
+  updateSummary();
+  const q   = document.getElementById('searchInput').value.toLowerCase();
+  const list = document.getElementById('studentsList');
+  const cur  = monthKey(Date.now());
+
+  const vis = students.filter(s =>
+    s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q))
+  );
+
+  if (vis.length === 0) {
+    list.innerHTML = `<div class="empty">
+      <div class="empty-icon">&#127891;</div>
+      <p>${students.length === 0
+        ? 'No students yet. Click "+ Add Student" to begin.'
+        : 'No students match your search.'}</p>
+    </div>`;
+    return;
+  }
+
+  /* Split into unpaid and paid */
+  const unpaid = vis.filter(s => {
+    const paid = s.payments.filter(p => monthKey(p.date) === cur).reduce((a,p) => a + p.amount, 0);
+    return (s.monthlyFee - paid) > 0;
+  });
+  const paid = vis.filter(s => {
+    const paidAmt = s.payments.filter(p => monthKey(p.date) === cur).reduce((a,p) => a + p.amount, 0);
+    return (s.monthlyFee - paidAmt) <= 0;
+  });
+
+  let html = '';
+
+  /* ── Unpaid Section ── */
+  if (unpaid.length > 0) {
+    html += `
+      <div class="section-divider">
+        <div class="section-divider-line"></div>
+        <div class="section-divider-label unpaid">
+          &#9888; Unpaid
+          <span class="section-divider-count">${unpaid.length}</span>
+        </div>
+        <div class="section-divider-line"></div>
+      </div>
+      <div class="students-list">
+        ${unpaid.map((s, i) => buildCard(s, i + 1)).join('')}
+      </div>`;
+  }
+
+  /* ── Paid Section ── */
+  if (paid.length > 0) {
+    html += `
+      <div class="section-divider">
+        <div class="section-divider-line"></div>
+        <div class="section-divider-label paid">
+          &#10003; Paid
+          <span class="section-divider-count">${paid.length}</span>
+        </div>
+        <div class="section-divider-line"></div>
+      </div>
+      <div class="students-list">
+        ${paid.map((s, i) => buildCard(s, i + 1)).join('')}
+      </div>`;
+  }
+
+  list.innerHTML = html;
+}
+
+/* ── Toggle card open/close ── */
+function toggleStudent(id) {
+  document.getElementById('sc-' + id).classList.toggle('expanded');
+}
+
+/* ── Open pay form ── */
+function openPayForm(id) {
+  document.getElementById('sc-' + id).classList.add('expanded');
+  const form = document.getElementById('pf-' + id);
+  const opening = !form.classList.contains('open');
+  form.classList.toggle('open', opening);
+  if (opening) setTimeout(() => document.getElementById('pa-' + id).focus(), 40);
+}
+
+/* ── Record payment
+   Timestamp = chosen date + current clock time
+   so we capture both date AND time-of-recording.
+── */
+function recordPayment(id) {
+  const s = students.find(x => x.id === id);
+  if (!s) return;
+  const amount  = parseFloat(document.getElementById('pa-' + id).value);
+  const dateStr = document.getElementById('pd-' + id).value;
+  if (!amount || amount < 1) { toast('Enter a valid amount'); return; }
+  if (!dateStr)               { toast('Select a date'); return; }
+
+  const [yr, mo, dy] = dateStr.split('-').map(Number);
+  const now = new Date();
+  const ts  = new Date(yr, mo - 1, dy,
+    now.getHours(), now.getMinutes(), now.getSeconds()).getTime();
+
+  s.payments.push({ amount, date: ts });
+  save(students);
+  renderStudents();
+  toast('Payment saved — ' + fmtDateTime(ts));
+  setTimeout(() => {
+    const card = document.getElementById('sc-' + id);
+    if (card) card.classList.add('expanded');
+  }, 0);
+}
+
+/* ── Delete one payment ── */
+function deletePayment(sid, idx) {
+  const s = students.find(x => x.id === sid);
+  if (!s) return;
+  s.payments.splice(idx, 1);
+  save(students);
+  renderStudents();
+  setTimeout(() => {
+    const c = document.getElementById('sc-' + sid);
+    if (c) c.classList.add('expanded');
+  }, 0);
+  toast('Payment removed');
+}
+
+/* ── Delete student ── */
+function openDeleteModal(id) {
+  deleteTarget = id;
+  const s = students.find(x => x.id === id);
+  document.getElementById('deleteModalMsg').textContent =
+    '"' + (s ? s.name : 'This student') + '" and all their payment records will be permanently deleted.';
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDeleteModal() {
+  deleteTarget = null;
+  document.getElementById('deleteModal').classList.remove('open');
+}
+function confirmDelete() {
+  students = students.filter(s => s.id !== deleteTarget);
+  save(students);
+  closeDeleteModal();
+  renderStudents();
+  toast('Student deleted');
+}
+
+/* ── Keyboard shortcuts ── */
+['newName','newPhone','newFee'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') addStudent();
+  });
+});
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDeleteModal();
+});
+
+/* ── Boot ── */
+renderStudents();
+
+/* ══════════════════════════════════════════════
+   PWA — Service Worker (inline via Blob URL)
+   Caches the page for full offline support.
+   Works on HTTP / HTTPS / localhost.
+══════════════════════════════════════════════ */
+(function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+
+  const CACHE  = 'fee-tracker-v1';
+  const SW_SRC = `
+const CACHE = 'fee-tracker-v1';
+
+/* On install: cache this page */
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE).then(c =>
+      c.addAll([self.location.origin + self.location.pathname])
+    ).catch(() => {})
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+/* Fetch: cache-first, network fallback */
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(res => {
+        if (res && res.status === 200) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request));
+    })
+  );
+});
+`;
+
+  const blob   = new Blob([SW_SRC], { type: 'application/javascript' });
+  const swURL  = URL.createObjectURL(blob);
+
+  navigator.serviceWorker.register(swURL, { scope: './' })
+    .then(reg => {
+      console.log('[PWA] Service Worker registered, scope:', reg.scope);
+    })
+    .catch(err => {
+      /* file:// protocol will fail — that's expected */
+      console.log('[PWA] SW not supported in this context:', err.message);
+    });
+})();
+
+/* ── PWA Install Prompt ── */
+let _deferredPrompt = null;
+
+/* Detect iOS */
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
+  || navigator.standalone === true;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredPrompt = e;
+
+  /* Show header install button */
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = '';
+
+  /* Show bottom banner (unless user dismissed before) */
+  if (!sessionStorage.getItem('pwa-banner-dismissed')) {
+    setTimeout(() => {
+      const banner = document.getElementById('pwa-banner');
+      if (banner) banner.classList.add('visible');
+    }, 2000);
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  _deferredPrompt = null;
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'none';
+  dismissBanner();
+  toast('✓ App install ho gaya! Home screen check karein');
+});
+
+function triggerInstall() {
+  if (_deferredPrompt) {
+    _deferredPrompt.prompt();
+    _deferredPrompt.userChoice.then(r => {
+      if (r.outcome === 'accepted') toast('✓ Installing…');
+      _deferredPrompt = null;
+      dismissBanner();
+    });
+  } else if (isIOS && !isInStandaloneMode) {
+    /* Show iOS manual hint */
+    const hint = document.getElementById('ios-hint');
+    if (hint) hint.classList.add('visible');
+  } else {
+    toast('Already installed ya browser support nahi hai');
+  }
+}
+
+function dismissBanner() {
+  const banner = document.getElementById('pwa-banner');
+  if (banner) banner.classList.remove('visible');
+  sessionStorage.setItem('pwa-banner-dismissed', '1');
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'none';
+}
+
+function dismissIosHint() {
+  const hint = document.getElementById('ios-hint');
+  if (hint) hint.classList.remove('visible');
+}
+
+/* On iOS in non-standalone: show hint button after delay */
+if (isIOS && !isInStandaloneMode && !sessionStorage.getItem('ios-hint-dismissed')) {
+  const btn = document.getElementById('installBtn');
+  if (btn) { btn.style.display = ''; btn.onclick = triggerInstall; }
+}
+</script>
+</body>
+</html>
